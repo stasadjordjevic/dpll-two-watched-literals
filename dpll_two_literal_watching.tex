@@ -20,22 +20,68 @@ TODO sazetak na kraju - rezime rada, max 100 reci
 
 \section{Uvod}
 
-Seminarski rad iz predmeta ,,Automatsko rezonovanje'' se sastoji iz:
+Automatsko rezonovanje je oblast računarske nauke koja se bavi razvojem metoda i algoritama za automatsko izvođenje zaključaka iz formalnih logičkih sistema. Jedan od centralnih problema u ovoj oblasti je problem zadovoljivosti iskazne logike (SAT problem), koji se sastoji u određivanju da li postoji interpretacija kojom se formula iskazne logike može učiniti istinitom. SAT problem je fundamentalni NP-kompletan problem i predstavlja osnovu za mnoge primene u verifikaciji softvera, veštačkoj inteligenciji i optimizaciji.
 
-\begin{itemize}
- \item implementacije izabrane metode automatskog rezonovanja u odabranom programskom jeziku koja se prevodi i radi ispravno
- \item kratkog rada (do 10 strana) koji opisuje odabranu metodu i njenu implementaciju
-\end{itemize}
+Jedna od najefikasnijih metoda za rešavanje SAT problema je DPLL algoritam (Davis–Putnam–Logemann–Loveland), koji predstavlja unapređenje klasičnog DP (Davis–Putnam) postupka. DPLL algoritam kombinuje sistematsko pretraživanje sa jednostrukim dedukcijama na osnovu jedinica (unit propagation) i detekcijom konflikata, čime omogućava efikasno ispitivanje velikih formula. Ključni deo DPLL algoritma predstavlja izbor literala i način na koji se donose odluke tokom pretraživanja, jer od toga zavisi brzina pronalaženja rešenja ili dokaza da rešenje ne postoji.
+
+U okviru ovog rada fokus je stavljen na analizu i implementaciju \emph{sheme dva posmatrana literala} unutar DPLL SAT rešavača. Ova shema predstavlja strategiju odabira literala, koja istovremeno razmatra dva kandidata za sledeći izbor, čime se povećava verovatnoća bržeg pronalaženja rešenja i smanjuje broj potrebnih grananja pretraživanja. Razumevanje i pravilna implementacija ove sheme može značajno poboljšati performanse DPLL algoritma, posebno na velikim i složenim SAT instancama.
 
 
-Svaki rad treba da sadr\v zi uvodno poglavlje u kome se ukratko opisuje metoda koja je implementirana u samom radu, daje motivacija za njeno kori\v s\' cenje i ista se stavlja u \v siri kontekst u oblasti automatskog rezonovanja. Na kraju uvoda, u zasebnom pasusu, najavljuje se sadr\v zaj ostatka rada (vidi slede\' ci pasus za primer).
+Ostatak ovog rada organizovan je na sledeći način. U poglavlju \ref{sec:osnove} uvodimo osnovne definicije i notaciju iz iskazne logike, kao i formalni opis SAT problema. Poglavlje \ref{sec:opis_metode} sadrži detaljan opis DPLL algoritma i sheme dva posmatrana literala. Poglavlje \ref{sec:implementacija} opisuje implementaciju ove metode u izabranom programskom jeziku Python, uključujući ključne klase i funkcije. Na kraju, poglavlje \ref{sec:zakljucak} daje osvrt na rezultate rada i diskusiju o efikasnosti primenjene strategije.
 
-Ostatak ovog rada organizovan je na slede\' ci na\v cin. U poglavlju \ref{sec:osnove} navodimo osnovne definicije, pojmove i notaciju koja \' ce biti kori\v s\'cena u ostatku rada. U poglavlju \ref{sec:opis_metode} dajemo detaljni opis algoritma koji je predmet ovog rada. Poglavlje \ref{sec:implementacija} sadr\v zi detalje implementacije metode. Najzad, poglavlje \ref{sec:zakljucak} sadr\v zi zaklju\v cna razmatranja i osvrt na metodu opisanu u radu.
 
 \section{Osnove}
 \label{sec:osnove}
 
-Poglavlje ,,Osnove'' treba da sadr\v zi osnovne definicije i notaciju koja \' ce biti kori\v s\' cena u ostatku rada. Na primer, ako je tema ,,Metod tabloa u iskaznoj logici'', potrebno je uvesti ukratko sintaksu i semantiku iskazne logike, definisati pojam zadovoljivosti i tautologi\v cnosti, kao i SAT problem.
+U ovom poglavlju uvodimo osnovne pojmove i notaciju iz iskazne logike koji će biti korišćeni u ostatku rada.  
+
+\subsection{Sintaksa iskazne logike}
+
+Iskazna logika se bazira na \emph{atomskim iskazima}, koji predstavljaju osnovne logičke promenljive, i na \emph{logičkim veznicima} koji povezuju iskaze u složenije formule.  
+
+Formule iskazne logike definišu se rekurzivno:  
+\begin{itemize}
+    \item Iskazna slova i logičke konstante su iskazne formule.
+    \item Ako su $F$ i $G$ formule, onda su i (F), $\neg F$ (negacija), $F \wedge G$ (konjunkcija), $F \vee G$ (disjunkcija), $F \rightarrow G$ (implikacija) i $F \leftrightarrow G$ (ekvivalencija) formule.
+\end{itemize}
+
+\subsection{Semantika iskazne logike}
+
+Semantika iskaznih formula definiše se pomoću pojma valuacije i interpretacije.  
+Valuacija je funkcija $v : P \rightarrow \{0,1\}$ koja svakom atomu iz skupa 
+iskaznih slova $P$ dodeljuje logičku vrednost.
+
+Svaka (potpuna) valuacija $v$ indukuje funkciju
+$I_v : F_P \rightarrow \{0,1\}$ na skupu svih iskaznih formula nad $P$ 
+(u oznaci $F_P$), koju nazivamo interpretacija. Ova funkcija svakoj formuli
+pridružuje istinitosnu vrednost i definiše se rekurzivno na sledeći način:
+
+\begin{itemize}
+    \item $I_v(p) = 1$ akko je $v(p) = 1$;
+    \item $I_v(\top) = 1$, $I_v(\bot) = 0$;
+    \item $I_v(\neg F) = 1$ akko je $I_v(F) = 0$;
+    \item $I_v(F_1 \wedge F_2) = 1$ akko je $I_v(F_1) = 1$ i $I_v(F_2) = 1$;
+    \item $I_v(F_1 \vee F_2) = 1$ akko je $I_v(F_1) = 1$ ili $I_v(F_2) = 1$;
+    \item $I_v(F_1 \Rightarrow F_2) = 1$ akko je $I_v(F_1) = 0$ ili $I_v(F_2) = 1$;
+    \item $I_v(F_1 \Leftrightarrow F_2) = 1$ akko je $I_v(F_1) = I_v(F_2)$.
+\end{itemize}
+
+
+\subsection{Zadovoljivost i tautologija}
+
+Formula $F$ je \emph{zadovoljiva} ako postoji barem jedna interpretacija $I$ takva da je $I(F) = $ True.  
+Formula je \emph{tautologija} ako je $I(F) = $ True za sve moguće interpretacije $I$. 
+S druge strane, formula je \emph{nezadovoljiva} ako ne postoji nijedna interpretacija koja je čini istinitom.  
+
+\subsection{SAT problem}
+
+Problem zadovoljivosti iskazne logike (SAT problem) je zadatak određivanja da li je data formula $F$ zadovoljiva. SAT problem je NP-kompletan i predstavlja osnovni problem u oblasti automatskog rezonovanja.
+
+U praksi, često se koriste formule u \emph{konjunktivnoj normalnoj formi} (CNF), gde je formula predstavljena kao konjunkcija klauza, a svaka klauza je disjunkcija literala. Literal je ili atomski iskaz ili njegova negacija.  
+
+%TODO razmisliti za narednu recenicu da l da bude u ovom delu
+%Za implementaciju DPLL algoritma, formula u CNF obliku omogućava efikasnu primenu jednostrukog zaključivanja (unit propagation) i strategija odabira literala, uključujući shemu dva posmatrana literala koja je tema ovog rada.
+
 
 \section{Opis metode}
 \label{sec:opis_metode}
@@ -56,7 +102,21 @@ U zaklju\v cku treba dati osvrt na ceo rad, kao i na metodu koja je u njemu prik
 dat u nastavku (primer knjige \cite{sat_handbook}, rada na konferenciji \cite{fast} i rada u \v casopisu \cite{dpll_t}).
 
 
+
+DPLL (Davis-Putnam-Logemann-Loveland) procedura ispituje zadovoljivost iskaznih formula datih u KNF obliku. Ova procedura je osmisljena 1962. godine od strane istrazivaca po kojima je i dobila ime. Ova procedura predstavlja proceduru pretrage, sto znaci da ce vratiti valuaciju koja zadovoljava formulu u slucaju da je ona zadovoljiva.
+DPLL procedura je nastala kao nadogradnja DP procedure koja je zauzimala vise memorije. Samim tim, nasledila je dosta koraka iz DP procedure.
+DP procedura je sustinski zzasnovana na rezoluciji i ima tri osnovne operacije:
+\begin{itemize}
+\item propagacija jedinicnih klauza (unit propagate)
+\item eliminacija cistih literala (pure literal)
+\item eliminacija promenljive (variable elimination)
+\end{itemize}
+
+
+
+
 \begin{thebibliography}{100}
+\bibitem{ar-prezentacija} Prezentacija sa kursa Automatsko rezonovanje \url{https://poincare.matf.bg.ac.rs/~milan.bankovic/preuzimanje/ar/ar-iskazna-logika.pdf}
 \bibitem{sat_handbook} Biere, Armin, Marijn Heule, and Hans van Maaren, eds. Handbook of satisfiability. Vol. 185. IOS press, 2009.
 \bibitem{fast} Ganzinger, Harald, et al. \emph{DPLL (T): Fast decision procedures.} Computer Aided Verification: 16th International Conference, CAV 2004, Boston, MA, USA, July 13-17, 2004. Proceedings 16. Springer Berlin Heidelberg, 2004.
 \bibitem{dpll_t} Nieuwenhuis, Robert, Albert Oliveras, and Cesare Tinelli. \emph{Solving SAT and SAT modulo theories: From an abstract Davis--Putnam--Logemann--Loveland procedure to DPLL (T)}. Journal of the ACM (JACM). 2006.
