@@ -22,7 +22,11 @@ TODO sazetak na kraju - rezime rada, max 100 reci
 
 Automatsko rezonovanje je oblast računarske nauke koja se bavi razvojem metoda i algoritama za automatsko izvođenje zaključaka iz formalnih logičkih sistema. Jedan od centralnih problema u ovoj oblasti je problem zadovoljivosti iskazne logike (SAT problem), koji se sastoji u određivanju da li postoji interpretacija kojom se formula iskazne logike može učiniti istinitom. SAT problem je fundamentalni NP-kompletan problem i predstavlja osnovu za mnoge primene u verifikaciji softvera, veštačkoj inteligenciji i optimizaciji.
 
+
 Jedna od najefikasnijih metoda za rešavanje SAT problema je DPLL algoritam (Davis–Putnam–Logemann–Loveland), koji predstavlja unapređenje klasičnog DP (Davis–Putnam) postupka. DPLL algoritam kombinuje sistematsko pretraživanje sa jednostrukim dedukcijama na osnovu jedinica (unit propagation) i detekcijom konflikata, čime omogućava efikasno ispitivanje velikih formula. Ključni deo DPLL algoritma predstavlja izbor literala i način na koji se donose odluke tokom pretraživanja, jer od toga zavisi brzina pronalaženja rešenja ili dokaza da rešenje ne postoji.
+
+% Osim osnovne, rekurzivne interpretacije algoritma, u praksi se često primenjuju različite optimizacije koje dodatno poboljšavaju performanse, kao što su parcijalne valuacije, strategije izbora literala i efikasno praćenje klauza. 
+
 
 U okviru ovog rada fokus je stavljen na analizu i implementaciju \emph{sheme dva posmatrana literala} unutar DPLL SAT rešavača. Ova shema predstavlja strategiju odabira literala, koja istovremeno razmatra dva kandidata za sledeći izbor, čime se povećava verovatnoća bržeg pronalaženja rešenja i smanjuje broj potrebnih grananja pretraživanja. Razumevanje i pravilna implementacija ove sheme može značajno poboljšati performanse DPLL algoritma, posebno na velikim i složenim SAT instancama.
 
@@ -86,7 +90,54 @@ U praksi, često se koriste formule u \emph{konjunktivnoj normalnoj formi} (CNF)
 \section{Opis metode}
 \label{sec:opis_metode}
 
-Ovo poglavlje treba da sad\v zi detaljniji opis samog algoritma koji je implementiran u okviru seminarskog rada. Algoritam mo\v ze biti opisan re\v cima ili pseudokodom (ne detaljno, ve\' c samo na nivou strukture). Treba poseban akcenat staviti na klju\v cne delove algoritma i njihovu ulogu. Po\v zeljno je navesti i primere koji dodatno razja\v snjavaju rad algoritma.
+% Ovo poglavlje treba da sad\v zi detaljniji opis samog algoritma koji je implementiran u okviru seminarskog rada. Algoritam mo\v ze biti opisan re\v cima ili pseudokodom (ne detaljno, ve\' c samo na nivou strukture). Treba poseban akcenat staviti na klju\v cne delove algoritma i njihovu ulogu. Po\v zeljno je navesti i primere koji dodatno razja\v snjavaju rad algoritma.
+U ovom poglavlju biće opisan DPLL algoritam za rešavanje SAT problema, zajedno sa ključnim mehanizmima koji utiču na njegovu efikasnost. Posebna pažnja biće posvećena jediničnoj propagaciji (engl. unit propagate) i shemi dva posmatrana literala, koja predstavlja standardnu optimizaciju u savremenim SAT rešavačima.
+
+\subsection{DPLL algoritam}
+
+DPLL  algoritam predstavlja rekurzivnu proceduru pretrage za određivanje zadovoljivosti formule u konjunktivnoj normalnoj formi (KNF). Za razliku od originalne DP procedure, DPLL ne eliminiše promenljive primenom rezolucije, već konstruiše parcijalnu valuaciju i sistematski ispituje moguće dodele vrednosti promenljivama.
+
+Neka je $F$ formula u KNF obliku, a $M$ parcijalna valuacija. Algoritam se može opisati sledećim koracima:
+
+\begin{enumerate}
+    \item Ako postoji klauza $C \in F$ koja je netačna u parcijalnoj valuaciji $M$, vraća se UNSAT.
+    \item Ako su sve promenljive iz $F$ dodeljene i nijedna klauza nije netačna, vraća se SAT.
+    \item Ako postoji jedinična klauza, primenjuje se jedinična propagacija.
+    \item Ako postoji čist literal, dodeljuje mu se odgovarajuća vrednost.
+    \item U suprotnom, bira se nedefinisani literal i algoritam se rekurzivno poziva nad dve proširene valuacije: $M \cup \{l\}$ i $M \cup \{\neg l\}$.
+\end{enumerate}
+
+\subsection{Jedinična propagacija (Unit Propagation)}
+
+\paragraph{Klasični DPLL.} U naivnom DPLL algoritmu koji transformiše formulu, jedinična klauza je klauza sa tačno jednim literalom. Dodeljivanjem vrednosti koja zadovoljava taj literal, sve klauze koje ga sadrže se uklanjaju, a iz preostalih klauza se uklanja njegova negacija. Postupak se ponavlja dok postoje jedinične klauze.
+
+\paragraph{DPLL sa parcijalnom valuacijom.} U implementacijama zasnovanim na parcijalnoj valuaciji $M$, klauza je jedinična ako su svi literali netačni, osim jednog koji je nedefinisan. Umesto transformacije formule, valuacija se proširuje sa tim literalom, a status klauza se ažurira u odnosu na novu dodelu.
+
+\paragraph{Shema dva posmatrana literala.} Da bi se izbegao obilazak svih klauza, koristi se shema dva posmatrana literala. U svakoj klauzi dva literala se aktivno prate. Ako jedan postane netačan, pokušava se zamena drugim literalom. Ako zamena nije moguća:
+\begin{itemize}
+    \item klauza je konfliktna ako je i drugi literal netačan,
+    \item klauza je jedinična ako je drugi literal nedefinisan.
+\end{itemize}
+
+Ova optimizacija značajno smanjuje broj provera potrebnih za detekciju konflikta i jediničnih klauza.
+
+\subsection{Eliminacija čistih literala (Pure Literal Rule)}
+\paragraph{Klasični DPLL.} Literal $l$ je čist ako njegova negacija $\neg l$ ne postoji ni u jednoj klauzi formule. Dodeljivanjem vrednosti koja čini $l$ istinitim, sve klauze koje ga sadrže se uklanjaju, što pojednostavljuje formulu.
+
+\paragraph{DPLL sa parcijalnom valuacijom.} Proverava se da li postoji literal $l$ koji još nije dodeljen i čija negacija nije prisutna u nezadovoljenim klauzama. Ako postoji, valuacija se proširuje sa $l$, a klauze koje ga sadrže se automatski smatraju zadovoljenim. U modernim rešavačima zasnovanim na CDCL paradigmi, eliminacija čistih literala se često izostavlja jer doprinos efikasnosti postaje manji u poređenju sa jediničnom propagacijom i učenjem klauza.
+
+\subsection{Split (Grananje)}
+
+Kada više nije moguće primeniti jediničnu propagaciju niti eliminaciju čistih literala, bira se nedefinisani literal $l$ i razmatraju se dve mogućnosti:
+$M \cup \{l\}$ i $M \cup \{\neg l\}.$
+Ovaj korak uvodi rekurzivnu pretragu prostora svih mogućih valuacija i ključan je za sistematsko ispitivanje formule. Efikasnost algoritma u velikoj meri zavisi od strategije izbora literala za split.
+\subsection{Shema dva posmatrana literala}
+
+Naivna implementacija DPLL algoritma zahteva proveru svih klauza nakon svake izmene valuacije. Shema dva posmatrana literala uvodi optimizaciju propagacije jediničnih klauza i detekcije konflikata. Svaka klauza aktivno prati dva literala, a klauza se proverava samo ako jedan od njih postane netačan. Ako zamena nije moguća, detektuje se konflikt ili klauza postaje jedinična.
+
+\subsection{Efekat optimizacije}
+
+Primena sheme dva posmatrana literala dovodi do značajnog poboljšanja performansi. Jedinična propagacija se realizuje uz znatno manji broj provera, a amortizovana (??) složenost postupka postaje linearna u odnosu na broj pojavljivanja literala. Ova tehnika je standardna komponenta modernih SAT rešavača i ključni je element njihove praktične efikasnosti. \cite{watched_cuts}
 
 \section{Implementacija}
 \label{sec:implementacija}
@@ -98,27 +149,21 @@ Takodje je bitno dati upustvo za prevodjenje i pokretanje projekta, kao i navest
 \section{Zaklju\v cak}
 \label{sec:zakljucak}
 
-U zaklju\v cku treba dati osvrt na ceo rad, kao i na metodu koja je u njemu prikazana. Ceo rad ne treba da ima vi\v se od 10 strana. Nakon zaklju\v cka, navesti spisak relevantne literature, ako je ista kori\v s\' cena u izradi seminarskog. Svi navedeni radovi iz spiska moraju biti citirani negde u tekstu na ovaj na\v cin \cite{sat_handbook}. Primer spiska literature je
-dat u nastavku (primer knjige \cite{sat_handbook}, rada na konferenciji \cite{fast} i rada u \v casopisu \cite{dpll_t}).
-
-
-
-DPLL (Davis-Putnam-Logemann-Loveland) procedura ispituje zadovoljivost iskaznih formula datih u KNF obliku. Ova procedura je osmisljena 1962. godine od strane istrazivaca po kojima je i dobila ime. Ova procedura predstavlja proceduru pretrage, sto znaci da ce vratiti valuaciju koja zadovoljava formulu u slucaju da je ona zadovoljiva.
-DPLL procedura je nastala kao nadogradnja DP procedure koja je zauzimala vise memorije. Samim tim, nasledila je dosta koraka iz DP procedure.
-DP procedura je sustinski zzasnovana na rezoluciji i ima tri osnovne operacije:
-\begin{itemize}
-\item propagacija jedinicnih klauza (unit propagate)
-\item eliminacija cistih literala (pure literal)
-\item eliminacija promenljive (variable elimination)
-\end{itemize}
-
-
+%U zaklju\v cku treba dati osvrt na ceo rad, kao i na metodu koja je u njemu prikazana. Ceo rad ne treba da ima vi\v se od 10 strana. Nakon zaklju\v cka, navesti spisak relevantne literature, ako je ista kori\v s\' cena u izradi seminarskog. Svi navedeni radovi iz spiska moraju biti citirani negde u tekstu na ovaj na\v cin \cite{sat_handbook}. Primer spiska literature je dat u nastavku (primer knjige \cite{sat_handbook}, rada na konferenciji \cite{fast} i rada u \v casopisu \cite{dpll_t}).
 
 
 \begin{thebibliography}{100}
-\bibitem{ar-prezentacija} Prezentacija sa kursa Automatsko rezonovanje \url{https://poincare.matf.bg.ac.rs/~milan.bankovic/preuzimanje/ar/ar-iskazna-logika.pdf}
+\bibitem{ar-prezentacija} Prezentacija sa kursa \emph{Automatsko rezonovanje}, Milan Banković, Matematički fakultet, dostupno na: \url{https://poincare.matf.bg.ac.rs/~milan.bankovic/preuzimanje/ar/ar-iskazna-logika.pdf}
+
+\bibitem{fmaric} Filip Marić, \emph{Flexible Implementation of SAT Solvers}, dostupno na: \url{https://poincare.matf.bg.ac.rs/~filip/phd/sat-flexible-implementation.pdf}
+
+\bibitem{watched_cuts} Himanshu Jain i Edmund M. Clarke, \emph{Efficient SAT Solving for Non‑Clausal Formulas Using DPLL, Graphs, and Watched Cuts}, u: \emph{Proceedings of the 46th Annual Design Automation Conference (DAC '09)}, stranice 563–568, ACM, 2009. DOI: \url{https://doi.org/10.1145/1629911.1630057}, dostupno na: \url{https://dl.acm.org/doi/epdf/10.1145/1629911.1630057}
+
+
+%bilo:
 \bibitem{sat_handbook} Biere, Armin, Marijn Heule, and Hans van Maaren, eds. Handbook of satisfiability. Vol. 185. IOS press, 2009.
 \bibitem{fast} Ganzinger, Harald, et al. \emph{DPLL (T): Fast decision procedures.} Computer Aided Verification: 16th International Conference, CAV 2004, Boston, MA, USA, July 13-17, 2004. Proceedings 16. Springer Berlin Heidelberg, 2004.
+\bibitem{optim} https://dl.acm.org/doi/epdf/10.1145/1629911.1630057
 \bibitem{dpll_t} Nieuwenhuis, Robert, Albert Oliveras, and Cesare Tinelli. \emph{Solving SAT and SAT modulo theories: From an abstract Davis--Putnam--Logemann--Loveland procedure to DPLL (T)}. Journal of the ACM (JACM). 2006.
 \end{thebibliography}
 
