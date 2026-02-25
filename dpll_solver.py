@@ -84,7 +84,6 @@ class DPLLSolver:
         self.formula.literal_to_clauses = ltc
     
     # pronalazi pure literale i dodeljuje im vrednosti
-    #TODO proveriti kada se zove pure literal i vezu sa 2lw 
     def pure_literal(self):
         pos = set()
         neg = set()
@@ -173,7 +172,7 @@ class DPLLSolver:
             if len(undef)==1:
                 state = self._save_state()
                 if not self.unit_propagate(undef[0]):
-                    self._restore_state()
+                    self._restore_state(state)
                     return None
                 result = self.dpll()
                 if result is None:
@@ -212,9 +211,7 @@ class DPLLSolver:
             print("UNSAT")
             return
         print("SAT")
-        print("model:")
-        for lit in res:
-            print(lit)
+        print("model:", " ".join(str(lit) for lit in res))
 
 # solve funkcija treba da vrati jedan model ako je formula zadovoljiva
     def solve(self):
@@ -236,8 +233,8 @@ class DPLLSolver:
                     return None
                 # ako je undef dodeljujemo 
                 if val==0:
-                    self.unit_propagate(lit)
+                    if not self.unit_propagate(lit):
+                        return None
 
                 
-        res =  self.dpll()
-        self.print_result(res)
+        return self.dpll()

@@ -6,3 +6,26 @@ This repository contains an implementation of a SAT solver based on the **DPLL (
 This work is a **seminar project** prepared for the course *Automated Reasoning* at the **Faculty of Mathematics, University of Belgrade**.  
 
 The repository also includes **documentation in Serbian** describing the implementation and methodology.
+
+## Repository structure
+
+- `cnf_formula.py` — `CNFFormula` class with data structures for the two-watched literals scheme and DIMACS file parsing
+- `dpll_solver.py` — `DPLLSolver` class with the DPLL procedure implementation
+- `main.py` — program entry point
+
+## Usage
+```bash
+python3 main.py proba.cnf
+```
+
+## Input format
+
+Input files must be in standard **DIMACS CNF format**:
+```
+c this is a comment
+p cnf <num_variables> <num_clauses>
+1 -2 0
+3 0
+...
+```
+Each clause is a list of integers terminated by `0`. Lines starting with `c` are treated as comments.
