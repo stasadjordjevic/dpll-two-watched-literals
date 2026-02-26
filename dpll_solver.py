@@ -11,7 +11,6 @@ class DPLLSolver:
         self.partial_valuation.add(lit)
 
     def get_value_of_var(self, var:int):
-        #var = abs(var) #TODO proveriti sa apsolutnim da l je ok
         if var in self.partial_valuation:
             return 1 #true
         elif -var in self.partial_valuation:
@@ -71,17 +70,10 @@ class DPLLSolver:
     
     # snimanje i vracanje stanja - backtracking
     def _save_state(self):
-        return (
-            set(self.partial_valuation),
-            dict(self.formula.watched_per_clause),
-            {k: set(v) for k, v in self.formula.literal_to_clauses.items()},
-        )
+        return set(self.partial_valuation)
 
     def _restore_state(self, state):
-        pv, wpc, ltc = state
-        self.partial_valuation = pv
-        self.formula.watched_per_clause = wpc
-        self.formula.literal_to_clauses = ltc
+        self.partial_valuation = state
     
     # pronalazi pure literale i dodeljuje im vrednosti
     def pure_literal(self):
@@ -163,6 +155,7 @@ class DPLLSolver:
         if self.is_complete():
             return list(self.partial_valuation)
         
+        # unit propagate
         for clause in self.formula.clauses:
             if any(self.get_value_of_var(l)==1 for l in clause):
                 continue # klauza je tacna
@@ -179,6 +172,7 @@ class DPLLSolver:
                     self._restore_state(state)
                 return result
         
+        # pure literal 
         pure_lit = self.pure_literal()
         if pure_lit is not None:
             self.assign(pure_lit)

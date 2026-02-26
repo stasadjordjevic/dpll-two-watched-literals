@@ -31,13 +31,13 @@ Jedna od najefikasnijih metoda za rešavanje SAT problema je DPLL algoritam (Dav
 U okviru ovog rada fokus je stavljen na analizu i implementaciju \emph{sheme dva posmatrana literala} unutar DPLL SAT rešavača. Ova shema predstavlja optimizaciju mehanizma jedinične propagacije i detekcije konflikata, čime se smanjuje broj potrebnih provera klauza tokom propagacije. Razumevanje i pravilna implementacija ove sheme može značajno poboljšati performanse DPLL algoritma, posebno na velikim i složenim SAT instancama.
 
 
-Ostatak ovog rada organizovan je na sledeći način. U poglavlju \ref{sec:osnove} uvodimo osnovne definicije i notaciju iz iskazne logike, kao i formalni opis SAT problema. Poglavlje \ref{sec:opis_metode} sadrži detaljan opis DPLL algoritma i sheme dva posmatrana literala. Poglavlje \ref{sec:implementacija} opisuje implementaciju ove metode u izabranom programskom jeziku Python, uključujući ključne klase i funkcije. Na kraju, poglavlje \ref{sec:zakljucak} daje osvrt na rezultate rada i diskusiju o efikasnosti primenjene strategije.
+Ostatak ovog rada organizovan je na sledeći način. U poglavlju \ref{sec:osnove} uvodimo osnovne definicije i notaciju iz iskazne logike, kao i formalni opis SAT problema. Poglavlje \ref{sec:opis_metode} sadrži detaljan opis DPLL algoritma i sheme dva posmatrana literala. Poglavlje \ref{sec:implementacija} opisuje implementaciju ove metode u programskom jeziku Python, uključujući ključne klase i funkcije. Na kraju, poglavlje \ref{sec:zakljucak} daje osvrt na rezultate rada i diskusiju o efikasnosti primenjene strategije.
 
 
 \section{Osnove}
 \label{sec:osnove}
 
-U ovom poglavlju uvodimo osnovne pojmove i notaciju iz iskazne logike koji će biti korišćeni u ostatku rada.  
+U ovom poglavlju uvodimo osnovne pojmove i notaciju iz iskazne logike koji će biti korišćeni u ostatku rada.  Pregled osnovnih pojmova i definicija preuzet je iz \cite{ar_prezentacija}.
 
 \subsection{Sintaksa iskazne logike}
 
@@ -70,18 +70,19 @@ pridružuje istinitosnu vrednost i definiše se rekurzivno na sledeći način:
     \item $I_v(F_1 \Leftrightarrow F_2) = 1$ akko je $I_v(F_1) = I_v(F_2)$.
 \end{itemize}
 
+Pored potpune valuacije, u praksi je često korisno definisati i \textbf{parcijalnu valuaciju}, koja dodeljuje istinitonosne vrednosti samo nekim atomima, dok za ostale promenljive ostaje nedefinisana. Parcijalna valuacija se obično predstavlja kao skup literala koji su tačni; literal je netačan ako mu suprotan literal pripada valuaciji, a u suprotnom je nedefinisan.
 
 \subsection{Zadovoljivost i tautologija}
 
 Formula $F$ je \emph{zadovoljiva} ako postoji barem jedna interpretacija $I$ takva da je $I(F) = 1$ .  
 Formula je \emph{tautologija} ako je $I(F) = 1$  za sve moguće interpretacije $I$. 
-S druge strane, formula je \emph{nezadovoljiva} ako ne postoji nijedna interpretacija koja je čini istinitom. \cite{ar_prezentacija}
+S druge strane, formula je \emph{nezadovoljiva} ako ne postoji nijedna interpretacija koja je čini istinitom.
 
 \subsection{SAT problem}
 
 Problem zadovoljivosti iskazne logike (SAT problem) je zadatak određivanja da li je data formula $F$ zadovoljiva. SAT problem je NP-kompletan i predstavlja osnovni problem u oblasti automatskog rezonovanja. \cite{sat_handbook}
 
-U praksi, često se koriste formule u \emph{konjunktivnoj normalnoj formi} (CNF), gde je formula predstavljena kao konjunkcija klauza, a svaka klauza je disjunkcija literala. Literal je ili atomski iskaz ili njegova negacija.  
+U praksi, često se koriste formule u \emph{konjunktivnoj normalnoj formi} (KNF), gde je formula predstavljena kao konjunkcija klauza, a svaka klauza je disjunkcija literala. Literal je ili atomski iskaz ili njegova negacija.  
 
 \section{Opis metode}
 \label{sec:opis_metode}
@@ -92,7 +93,7 @@ U ovom poglavlju biće opisan DPLL algoritam za rešavanje SAT problema, zajedno
 
 \subsection{DPLL algoritam}
 
-DPLL  algoritam predstavlja rekurzivnu proceduru pretrage za određivanje zadovoljivosti formule u konjunktivnoj normalnoj formi (KNF). Za razliku od originalne DP procedure, DPLL ne eliminiše promenljive primenom rezolucije, već konstruiše parcijalnu valuaciju i sistematski ispituje moguće dodele vrednosti promenljivama.
+DPLL  algoritam predstavlja rekurzivnu proceduru pretrage za određivanje zadovoljivosti formule u konjunktivnoj normalnoj formi (KNF). Za razliku od originalne DP procedure, DPLL ne eliminiše promenljive primenom rezolucije, već sistematski ispituje moguće dodele vrednosti promenljivama. Originalni DPLL algoritam menja formulu pri svakoj dodeli promenljive, dok u ovoj implementaciji koristimo unapređenu verziju zasnovanu na parcijalnoj valuaciji i shemi dva posmatrana literala, što omogućava ažuriranje samo relevantnih klauza bez transformacije celokupne formule. Pretraga se zasniva na proveri obe moguće istinitosne vrednosti svake promenljive u formuli i ažuriranju stanja formule kroz parcijalnu valuaciju.
 
 Neka je $F$ formula u KNF obliku, a $M$ parcijalna valuacija. Algoritam se može opisati sledećim koracima:
 
@@ -139,7 +140,7 @@ Struktura DPLL algoritma može se prikazati sledećim pseudokodom:
 \end{algorithm}
 
 
-\subsection{Jedinična propagacija (Unit Propagate Rule)}
+\subsection{Jedinična propagacija i shema dva posmatrana literala}
 
 \paragraph{Klasični DPLL.} U naivnom DPLL algoritmu koji transformiše formulu, jedinična klauza je klauza sa tačno jednim literalom. Dodeljivanjem vrednosti koja zadovoljava taj literal, sve klauze koje ga sadrže se uklanjaju, a iz preostalih klauza se uklanja njegova negacija. Postupak se ponavlja dok postoje jedinične klauze. \cite{dp}
 
@@ -151,26 +152,19 @@ Struktura DPLL algoritma može se prikazati sledećim pseudokodom:
     \item klauza je jedinična ako je drugi literal nedefinisan.
 \end{itemize}
 
-Ova optimizacija značajno smanjuje broj provera potrebnih za detekciju konflikta i jediničnih klauza.
+Ova optimizacija značajno smanjuje broj provera potrebnih za detekciju konflikta i jediničnih klauza. Umesto obilaska svih klauza nakon svake izmene valuacije, proveravaju se samo one klauze u kojima se prati literal koji je upravo postao netačan. Zbog toga shema dva posmatrana literala predstavlja standardnu komponentu savremenih SAT rešavača i ključni je element njihove praktične efikasnosti. \cite{2wl}
+
 
 \subsection{Eliminacija čistih literala (Pure Literal Rule)}
 \paragraph{Klasični DPLL.} Literal $l$ je čist ako njegova negacija $\neg l$ ne postoji ni u jednoj klauzi formule. Dodeljivanjem vrednosti koja čini $l$ istinitim, sve klauze koje ga sadrže se uklanjaju, što pojednostavljuje formulu. \cite{dp}
 
-\paragraph{DPLL sa parcijalnom valuacijom.} Proverava se da li postoji literal $l$ koji još nije dodeljen i čija negacija nije prisutna u nezadovoljenim klauzama. Ako postoji, valuacija se proširuje sa $l$, a klauze koje ga sadrže se automatski smatraju zadovoljenim. U modernim rešavačima zasnovanim na CDCL paradigmi, eliminacija čistih literala se često izostavlja jer doprinos efikasnosti postaje manji u poređenju sa jediničnom propagacijom i učenjem klauza.
+\paragraph{DPLL sa parcijalnom valuacijom.} Proverava se da li postoji literal $l$ koji je nedefinisan u parcijalnoj valuaciji i čija negacija nije prisutna u nezadovoljenim klauzama. Ako postoji, valuacija se proširuje sa $l$, a klauze koje ga sadrže se automatski smatraju zadovoljenim. 
 
 \subsection{Split (Grananje)}
 
 Kada više nije moguće primeniti jediničnu propagaciju niti eliminaciju čistih literala, bira se nedefinisani literal $l$ i razmatraju se dve mogućnosti:
-$M \cup \{l\}$ i $M \cup \{\neg l\}.$
-Ovaj korak uvodi rekurzivnu pretragu prostora svih mogućih valuacija i ključan je za sistematsko ispitivanje formule. Efikasnost algoritma u velikoj meri zavisi od strategije izbora literala za split. \cite{dp}
-\subsection{Shema dva posmatrana literala}
-
-Naivna implementacija DPLL algoritma zahteva proveru svih klauza nakon svake izmene valuacije. Shema dva posmatrana literala uvodi optimizaciju propagacije jediničnih klauza i detekcije konflikata. Svaka klauza aktivno prati dva literala, a klauza se proverava samo ako jedan od njih postane netačan. Ako zamena nije moguća, detektuje se konflikt ili klauza postaje jedinična. \cite{watched_cuts}
-
-\subsection{Efekat optimizacije}
-
-Primena sheme dva posmatrana literala dovodi do značajnog poboljšanja performansi. Jedinična propagacija se realizuje uz znatno manji broj provera.
-Ova tehnika je standardna komponenta modernih SAT rešavača i ključni je element njihove praktične efikasnosti. \cite{watched_cuts}
+$M \cup \{l\}$ i $M  \cup  \{\neg l\}.$
+Ovaj korak uvodi rekurzivnu pretragu prostora svih mogućih valuacija i ključan je za sistematsko ispitivanje formule. %Efikasnost algoritma u velikoj meri zavisi od strategije izbora literala za split.
 
 \section{Implementacija}
 \label{sec:implementacija}
@@ -188,20 +182,20 @@ Modul \texttt{cnf\_formula.py} sadrži klasu \texttt{CNFFormula} koja predstavlj
 
 Ove dve strukture zajedno omogućavaju efikasnu propagaciju: kada literal $l$ postane netačan, direktno se pristupa samo onim klauzama u kojima je $l$ posmatran, bez prolaska kroz celu formulu.
 
+Takođe, u ovom modulu se nalazi i metod za čitanje formule iz DIMACS formata.
+
+\vspace{2em}
+
 Modul \texttt{dpll\_solver.py} sadrži klasu \texttt{DPLLSolver} koja prima objekat tipa \texttt{CNFFormula} i održava parcijalnu valuaciju $M$ u vidu skupa literala. Ključne metode klase su:
 
 \begin{itemize}
     \item \texttt{unit\_propagate(lit)} -- po dodavanju literala \texttt{lit} u $M$, obilazi listu klauza u kojima je $\neg$\texttt{lit} posmatran i za svaku takvu klauzulu traži alternativnog posmatranog literala. Ako alternativa postoji, ažuriraju se obe mape. Ako ne postoji, a drugi posmatrani literal je nedefinisan, propagira se taj literal kao jedinična klauza. Ako je i on netačan, prijavljuje se konflikt,
     \item \texttt{pure\_literal()} -- pronalazi čist literal pregledom nezadovoljenih klauza u odnosu na tekuću valuaciju $M$,
     \item \texttt{pick\_unassigned()} -- bira prvi nedefinisani literal kao literal odlučivanja,
-    \item \texttt{\_save\_state()} i \texttt{\_restore\_state(state)} -- čuvaju i vraćaju stanje solvera, tj. parcijalnu valuaciju i obe mape posmatranih literala, što omogućava vraćanje unazad (backtracking) nakon neuspešne pretrage,
+    \item \texttt{\_save\_state()} i \texttt{\_restore\_state(state)} -- čuvaju i vraćaju parcijalnu valuaciju, što omogućava vraćanje unazad (backtracking) nakon neuspešne pretrage,%čuvaju i vraćaju stanje solvera, tj. parcijalnu valuaciju i obe mape posmatranih literala, što omogućava vraćanje unazad (backtracking) nakon neuspešne pretrage
     \item \texttt{dpll()} -- rekurzivna implementacija DPLL procedure opisane u poglavlju \ref{sec:opis_metode},
     \item \texttt{solve()} -- javni ulaz u solver koji obrađuje inicijalne jedinične i prazne klauze pre pokretanja rekurzije.
 \end{itemize}
-
-\subsection{Napomena o povratku unazad}
-
-Kada se primenjuje shema dva posmatrana literala, povratak unazad zahteva poništavanje ne samo parcijalnih dodela već i promena u strukturama \texttt{watched\_per\_clause} i \texttt{literal\_to\_clauses}. U implementaciji se to rešava snimanjem kompletnog stanja sva tri objekta pre svake odluke i vraćanjem tog stanja u slučaju neuspeha. Alternativni pristup bio bi eksplicitno praćenje izmena u obliku traga (engl. trail), ali za potrebe ovog rada odabran je jednostavniji pristup kopiranjem stanja.
 
 \subsection{Pokretanje programa}
 
@@ -232,40 +226,24 @@ SAT
 model: 1 2 -3
 \end{verbatim}
 
+%TODO objasniti tj napisati u KNF-u ulaz i sta je izlaz
 
 Metoda \texttt{solve} vraća listu literala koji čine model ako je formula zadovoljiva, ili \texttt{None} u suprotnom. Metoda \texttt{print\_result} ispisuje SAT ili UNSAT i, u slučaju zadovoljive formule, jedan njen model.
 
 Ulazni fajlovi moraju biti u standardnom DIMACS CNF formatu. Prva nekomentarisana linija je zaglavlje oblika \texttt{p cnf <broj\_promenljivih> <broj\_klauza>}, svaka naredna linija predstavlja jednu klauzulu kao listu literala završenu nulom, a linije koje počinju slovom \texttt{c} tretiraju se kao komentari.
 
 
-%U ovom poglavlju treba dati detalje implementacije. Treba navesti u kom programskom jeziku je metoda implementirana, kako je k\^od organizovan, koje su klju\v cne funkcije/klase/metode i koja je njihova uloga.
-
-%Takodje je bitno dati upustvo za prevodjenje i pokretanje projekta, kao i navesti softver koji je potreban za prevodjenje i pokretanje programa (prevodilac, alati, dodatne bibiloteke i sl.).
-
 \section{Zaklju\v cak}
 \label{sec:zakljucak}
-U ovom radu prikazana je shema dva posmatrana literala kao optimizacija DPLL 
-algoritma za rešavanje SAT problema. Opisani su teorijski osnovi metode, njena 
-uloga u efikasnoj detekciji jediničnih klauza i konflikata, kao i detalji 
-implementacije u programskom jeziku Python.
+U ovom radu prikazana je shema dva posmatrana literala kao optimizacija DPLL  algoritma za rešavanje SAT problema. Opisani su teorijski osnovi metode, njena uloga u efikasnoj detekciji jediničnih klauza i konflikata, kao i detalji implementacije u programskom jeziku Python.
 
-Ključna prednost sheme dva posmatrana literala leži u tome što se provera klauza 
-ne vrši globalno nakon svake dodele, već samo za one klauze u kojima je netačan 
-literal bio posmatran. Time se značajno smanjuje broj potrebnih operacija tokom 
-jedinične propagacije, što je naročito izraženo na velikim instancama sa mnogo 
-klauza.
+Ključna prednost sheme dva posmatrana literala leži u tome što se provera klauza ne vrši globalno nakon svake dodele, već samo za one klauze u kojima je netačan literal bio posmatran. Time se značajno smanjuje broj potrebnih operacija tokom jedinične propagacije, što je naročito izraženo na velikim instancama sa mnogo klauza.
 
 Implementirana procedura prati pseudokod DPLL algoritma uz tri pravila: jediničnu 
-propagaciju, eliminaciju čistih literala i grananje sa vraćanjem unazad. Povratak 
-unazad zahteva poništavanje promena i u strukturama posmatranih literala, što je 
-rešeno snimanjem i vraćanjem stanja pre svake odluke.
+propagaciju, eliminaciju čistih literala i grananje sa vraćanjem unazad. 
 
-Mogući pravac daljeg razvoja je prelazak na CDCL (Conflict-Driven Clause Learning) 
-paradigmu, koja uz shemu dva posmatrana literala koristi i učenje novih klauza iz 
-konflikata, što dodatno ubrzava pretragu. Savremeni SAT rešavači poput MiniSat i 
-Glucose zasnovani su upravo na ovoj kombinaciji tehnika.
-
-%U zaklju\v cku treba dati osvrt na ceo rad, kao i na metodu koja je u njemu prikazana. Ceo rad ne treba da ima vi\v se od 10 strana. Nakon zaklju\v cka, navesti spisak relevantne literature, ako je ista kori\v s\' cena u izradi seminarskog. Svi navedeni radovi iz spiska moraju biti citirani negde u tekstu na ovaj na\v cin \cite{sat_handbook}. Primer spiska literature je dat u nastavku (primer knjige \cite{sat_handbook}, rada na konferenciji \cite{fast} i rada u \v casopisu \cite{dpll_t}).
+Mogući pravac daljeg razvoja je prelazak na CDCL (Conflict-Driven Clause Learning) algoritam, koji predstavlja značajno unapređenje u odnosu na klasični DPLL. 
+CDCL zadržava tehnike već opisane u ovom radu - inkrementalnu izgradnju parcijalne valuacije i shemu dva posmatrana literala, ali uvodi i dodatna poboljšanja: iterativnu implementaciju umesto rekurzivne, efikasne heuristike grananja, analizu konflikata zasnovanu na rezoluciji, nehronološko vraćanje unazad i učenje novih klauza iz konflikata u cilju sprečavanja sličnih konflikata u budućnost. \cite{ar_prezentacija} Zahvaljujući ovim unapređenjima, CDCL algoritmi postižu znatno bolje performanse u praksi i predstavljaju prirodan pravac daljeg razvoja implementacije prikazane u ovom radu.
 
 
 \begin{thebibliography}{100}
@@ -282,13 +260,11 @@ F. Marić,
 Matematički fakultet Univerziteta u Beogradu,
 dostupno na: \url{https://poincare.matf.bg.ac.rs/~filip/phd/sat-flexible-implementation.pdf}.
 
-\bibitem{watched_cuts}
-H. Jain i E. M. Clarke,
-``Efficient SAT Solving for Non-Clausal Formulas Using DPLL, Graphs, and Watched Cuts'',
-u: \emph{Proceedings of the 46th Annual Design Automation Conference (DAC '09)},
-ACM, 2009, str. 563–568.
-%DOI: \url{https://doi.org/10.1145/1629911.1630057}.
+%\bibitem{watched_cuts}H. Jain i E. M. Clarke,``Efficient SAT Solving for Non-Clausal Formulas Using DPLL, Graphs, and Watched Cuts'', u: \emph{Proceedings of the 46th Annual Design Automation Conference (DAC '09)}, ACM, 2009, str. 563–568.
 
+\bibitem{2wl} M. W. Moskewicz, C. F. Madigan, Y. Zhao, L. Zhang, and S. Malik. Chaff:
+Engineering an efficient SAT solver. In DAC, str. 530–535, June 2001.
+% https://www.princeton.edu/~chaff/publication/DAC2001v56.pdf (ovde sve za 2wl)
 \bibitem{sat_handbook}
 A. Biere, M. Heule i H. van Maaren (ur.),
 \emph{Handbook of Satisfiability},
@@ -298,6 +274,11 @@ IOS Press, 2009.
 M. Davis i H. Putnam,
 ``A Computing Procedure for Quantification Theory'',
 \emph{Journal of the ACM}, 7(3), 1960, str. 201–215.
+% https://dl.acm.org/doi/10.1145/321033.321034
+
+%BITNA lit!!
+% https://d1wqtxts1xzle7.cloudfront.net/39095614/Thesis_Report-libre.pdf?1444523956=&response-content-disposition=inline%3B+filename%3DWatched_Literals_in_a_Finite_Domain_SAT.pdf&Expires=1772050290&Signature=e7NMUppdHuYlRMZvYfpDyoJKQ9dYGdM6Khy~GTkCvgG2CwLtzq4P395mqgseHqFl4C00RFFT1wCw103NNo93wx1SOdFzf10ZRCS6QsN~1wZYEDBy1EQUcw8BPQT393~xCm4EccMak-oqqO3cRs6y4-c-MXqZisC1EUXLI64SyVr9W3VriU8wVbHE6lnsfsEmBt64c~0mgg-KQ8w4x66zrGYRf4HMcwy-EgPzkexaeK6pRfOlN6GeyVBzyCFY0jmhJsxG5St5fJTfeHFcF-jiEBb0gBz4jLEyGI11dN8LCOeGdGn7RFSZpMge5RMDq5iu2CMOFTorD7RFSosRPq-Myg__&Key-Pair-Id=APKAJLOHF5GGSLRBV4ZA
+\bibitem{jain_master} Anurag Jain, \emph{Watched Literals in a Finite Domain SAT Solver}, Master’s thesis, University of Minnesota, Faculty of the Graduate School, September 2008, dostupno na: \url{https://d1wqtxts1xzle7.cloudfront.net/39095614/Thesis_Report-libre.pdf?1444523956&response-content-disposition=inline\%3B+filename\%3DWatched_Literals_in_a_Finite_Domain_SAT.pdf}.
 
 \end{thebibliography}
 
