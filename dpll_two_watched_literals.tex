@@ -25,7 +25,7 @@ U ovom radu analizirana je i implementirana shema dva posmatrana literala u okvi
 Automatsko rezonovanje je oblast računarske nauke koja se bavi razvojem metoda i algoritama za automatsko izvođenje zaključaka iz formalnih logičkih sistema. Jedan od centralnih problema u ovoj oblasti je problem zadovoljivosti iskazne logike (SAT problem), koji se sastoji u određivanju da li postoji interpretacija kojom se formula iskazne logike može učiniti istinitom. SAT problem je fundamentalni NP-kompletan problem i predstavlja osnovu za mnoge primene u verifikaciji softvera, veštačkoj inteligenciji i optimizaciji. \cite {fmaric}
 
 
-Jedna od najefikasnijih metoda za rešavanje SAT problema je DPLL algoritam (Davis–Putnam–Logemann–Loveland), koji predstavlja unapređenje klasičnog DP (Davis–Putnam) postupka. DPLL algoritam kombinuje sistematsko pretraživanje sa jednostrukim dedukcijama na osnovu jedinica (unit propagate) i detekcijom konflikata, čime omogućava efikasno ispitivanje velikih formula. Ključni deo DPLL algoritma predstavlja izbor literala i način na koji se donose odluke tokom pretraživanja, jer od toga zavisi brzina pronalaženja rešenja ili dokaza da rešenje ne postoji. \cite{dp}
+Jedna od najefikasnijih metoda za rešavanje SAT problema je DPLL algoritam (Davis–Putnam–Logemann–Loveland), koji predstavlja unapređenje klasičnog DP (Davis–Putnam) postupka. DPLL algoritam kombinuje sistematsko pretraživanje sa jediničnim propagacijama (unit propagate) i detekcijom konflikata, čime omogućava efikasno ispitivanje zadovoljivosti velikih formula. \cite{dp}
 
 
 U okviru ovog rada fokus je stavljen na analizu i implementaciju \emph{sheme dva posmatrana literala} unutar DPLL SAT rešavača. Ova shema predstavlja optimizaciju mehanizma jedinične propagacije i detekcije konflikata, čime se smanjuje broj potrebnih provera klauza tokom propagacije. Razumevanje i pravilna implementacija ove sheme može značajno poboljšati performanse DPLL algoritma, posebno na velikim i složenim SAT instancama.
@@ -142,14 +142,14 @@ Struktura DPLL algoritma može se prikazati sledećim pseudokodom:
 
 \subsection{Jedinična propagacija i shema dva posmatrana literala}
 
-\paragraph{Klasični DPLL.} U naivnom DPLL algoritmu koji transformiše formulu, jedinična klauza je klauza sa tačno jednim literalom. Dodeljivanjem vrednosti koja zadovoljava taj literal, sve klauze koje ga sadrže se uklanjaju, a iz preostalih klauza se uklanja njegova negacija. Postupak se ponavlja dok postoje jedinične klauze. \cite{dp}
+\paragraph{Klasični DPLL.} U originalnom DPLL algoritmu koji transformiše formulu, jedinična klauza je klauza sa tačno jednim literalom. Dodeljivanjem vrednosti koja zadovoljava taj literal, sve klauze koje ga sadrže se uklanjaju, a iz preostalih klauza se uklanja njegova negacija. Postupak se ponavlja dok postoje jedinične klauze. \cite{dp}
 
 \paragraph{DPLL sa parcijalnom valuacijom.} U implementacijama zasnovanim na parcijalnoj valuaciji $M$, klauza je jedinična ako su svi literali netačni, osim jednog koji je nedefinisan. Umesto transformacije formule, valuacija se proširuje sa tim literalom, a status klauza se ažurira u odnosu na novu dodelu.
 
 \paragraph{Shema dva posmatrana literala.} Da bi se izbegao obilazak svih klauza, koristi se shema dva posmatrana literala. U svakoj klauzi dva literala se aktivno prate. Ako jedan postane netačan, pokušava se zamena drugim literalom. Ako zamena nije moguća:
 \begin{itemize}
-    \item klauza je konfliktna ako je i drugi literal netačan,
-    \item klauza je jedinična ako je drugi literal nedefinisan.
+    \item klauza je konfliktna ako je i drugi posmatrani literal netačan,
+    \item klauza je jedinična ako je drugi posmatrani literal nedefinisan.
 \end{itemize}
 
 Ova optimizacija značajno smanjuje broj provera potrebnih za detekciju konflikta i jediničnih klauza. Umesto obilaska svih klauza nakon svake izmene valuacije, proveravaju se samo one klauze u kojima se prati literal koji je upravo postao netačan. Zbog toga shema dva posmatrana literala predstavlja standardnu komponentu savremenih SAT rešavača i ključni je element njihove praktične efikasnosti. \cite{2wl}
